@@ -250,6 +250,8 @@ def _get_sp_app():
         token_cache=_sp_token_cache,
     )
 
+_SP_SCOPES_MY = ["https://aquanqape-my.sharepoint.com/.default"]
+
 def _get_token_for(scopes: list[str]) -> str | None:
     app      = _get_sp_app()
     accounts = app.get_accounts()
@@ -275,11 +277,16 @@ def _get_token_for(scopes: list[str]) -> str | None:
         st.stop()
     return result["access_token"]
 
+def _autenticar_todo():
+    """Autentica ambos scopes de una vez al inicio."""
+    _get_token_for(_SP_SCOPES)
+    _get_token_for(_SP_SCOPES_MY)
+
 def _get_sp_token() -> str | None:
     return _get_token_for(_SP_SCOPES)
 
 def _get_sp_token_my() -> str | None:
-    return _get_token_for(["https://aquanqape-my.sharepoint.com/.default"])
+    return _get_token_for(_SP_SCOPES_MY)
 
 def _descargar_excel(site_base: str, ruta: str, label: str, token_fn=None) -> pd.DataFrame:
     try:
@@ -638,6 +645,8 @@ def cargar_kmz_github():
 # ── App ───────────────────────────────────────────────────────────────────────
 st.title("🌱 Rendimiento de Cultivo")
 
+_autenticar_todo()
+
 file_bytes          = cargar_kmz_github()
 rendimiento_modulos = cargar_rendimiento_modulos()
 rendimiento_turnos  = cargar_rendimiento_turnos()
@@ -751,6 +760,16 @@ if file_bytes:
         centro = [(bounds[1] + bounds[3]) / 2, (bounds[0] + bounds[2]) / 2]
 
         mapa = folium.Map(location=centro, zoom_start=14, tiles='Esri.WorldImagery')
+
+        # ── Geolocalización ──
+        from folium.plugins import LocateControl
+        LocateControl(
+            auto_start=False,
+            position="topleft",
+            strings={"title": "Ver mi ubicación"},
+            fly_to=True,
+            keep_current_zoom_level=False,
+        ).add_to(mapa)
 
         # ── Polígonos ──
         if not gdf_pol.empty:
